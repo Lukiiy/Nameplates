@@ -1,0 +1,9 @@
+name: Nameplates
+description: $description
+version: '${version}'
+
+main: me.lukiiy.nameplates.Nameplates
+api-version: '1.21.9'
+load: POSTWORLD
+
+authors: [ Lukiiy ]
