@@ -7,7 +7,8 @@ class Nameplates : JavaPlugin() {
         // Plugin startup logic
     }
 
-    override fun onDisable() {
-        // Plugin shutdown logic
+    companion object {
+        val instance: Nameplates
+            get() = getPlugin(Nameplates::class.java)
     }
 }
