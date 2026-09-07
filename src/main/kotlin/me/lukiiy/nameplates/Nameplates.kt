@@ -3,8 +3,12 @@ package me.lukiiy.nameplates
 import org.bukkit.plugin.java.JavaPlugin
 
 class Nameplates : JavaPlugin() {
+    lateinit var manager: NametagManager
+
+    val viewDist: Int = 32
+
     override fun onEnable() {
-        // Plugin startup logic
+        manager = NametagManager()
     }
 
     companion object {
