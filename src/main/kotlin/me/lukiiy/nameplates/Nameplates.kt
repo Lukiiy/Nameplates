@@ -24,6 +24,10 @@ class Nameplates : JavaPlugin() {
         } }
     }
 
+    override fun onDisable() {
+        server.onlinePlayers.forEach { manager.unregister(it) }
+    }
+
     companion object {
         val instance: Nameplates
             get() = getPlugin(Nameplates::class.java)
