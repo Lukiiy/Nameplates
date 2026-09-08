@@ -7,6 +7,7 @@ import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.entity.Player
 
 
@@ -14,7 +15,13 @@ object Cmd {
     private val main = Commands.literal("nameplates").requires { it.sender.hasPermission("nameplates.cmd") }
 
     private val reload = Commands.literal("reload").executes {
-        TODO("haha")
+        Nameplates.instance.apply {
+            reloadConfig()
+            reloadComms()
+        }
+
+        it.source.sender.sendMessage(Component.text("Nameplates reloaded!").color(NamedTextColor.GREEN))
+        Command.SINGLE_SUCCESS
     }
 
     private val toggle = Commands.literal("toggle").then(Commands.argument("player", ArgumentTypes.player()).executes {
