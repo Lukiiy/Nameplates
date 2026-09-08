@@ -16,6 +16,12 @@ class Nameplates : JavaPlugin() {
         reloadComms()
 
         manager = NametagManager()
+
+        server.pluginManager.registerEvents(Echo(), this)
+
+        lifecycleManager.registerEventHandler(LifecycleEvents.COMMANDS) { it.registrar().apply {
+            register(Cmd.register(), "Main command for Nameplates.", listOf("nameplates"))
+        } }
     }
 
     companion object {
