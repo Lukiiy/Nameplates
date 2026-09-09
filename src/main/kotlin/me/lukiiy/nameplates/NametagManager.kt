@@ -15,7 +15,6 @@ class NametagManager {
     private val entities: MutableMap<Player, PlateEntity> = ConcurrentHashMap()
     private val tracking: MutableMap<Player, MutableSet<Player>> = ConcurrentHashMap()
     private val lines: MutableMap<Player, MutableList<Component>> = ConcurrentHashMap()
-    private val overrides: MutableMap<Player, String> = ConcurrentHashMap()
     private val hidden: MutableSet<Player> = CopyOnWriteArraySet()
 
     fun register(player: Player) {
@@ -34,14 +33,6 @@ class NametagManager {
         overrides.remove(player)
         hidden.remove(player)
     }
-
-    fun setOverride(player: Player, raw: String?) {
-        if (raw == null) overrides.remove(player) else overrides[player] = raw
-
-        refresh(player)
-    }
-
-    fun hasOverride(player: Player?): Boolean = overrides.containsKey(player)
 
     fun setHidden(player: Player, isHidden: Boolean) {
         if (isHidden) hidden.add(player) else hidden.remove(player)
