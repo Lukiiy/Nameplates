@@ -9,11 +9,11 @@ repositories {
 }
 
 dependencies {
-    paperweight.paperDevBundle("1.21.9-R0.1-SNAPSHOT")
+    paperweight.paperDevBundle("26.2.build.+")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 }
 
-kotlin.jvmToolchain(21)
+kotlin.jvmToolchain(25)
 
 tasks {
     build {
