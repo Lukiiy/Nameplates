@@ -1,41 +1,18 @@
 package me.lukiiy.nameplates
 
+import io.netty.buffer.Unpooled
+import net.minecraft.network.FriendlyByteBuf
 import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket
-import java.lang.reflect.Constructor
-import java.lang.reflect.Field
 
 object PassengerPacketAccessor {
-    private val passengersConstructor: Constructor<ClientboundSetPassengersPacket>? = runCatching {
-        ClientboundSetPassengersPacket::class.java.getDeclaredConstructor().apply { isAccessible = true }
-    }.getOrNull()
+    private val constructor = ClientboundSetPassengersPacket::class.java.getDeclaredConstructor(FriendlyByteBuf::class.java).apply { isAccessible = true }
 
-    private val vehicleField: Field?
-    private val passengersField: Field?
+    fun build(vehicleId: Int, passengerIds: IntArray): ClientboundSetPassengersPacket {
+        val byteBuf = FriendlyByteBuf(Unpooled.buffer())
 
-    init {
-        var vField: Field? = null
-        var pField: Field? = null
+        byteBuf.writeVarInt(vehicleId)
+        byteBuf.writeVarIntArray(passengerIds)
 
-        for (field in ClientboundSetPassengersPacket::class.java.declaredFields) {
-            field.isAccessible = true
-            when (field.type) {
-                Int::class.javaPrimitiveType -> vField = field
-                IntArray::class.java -> pField = field
-            }
-        }
-
-        vehicleField = vField
-        passengersField = pField
-    }
-
-    fun build(vehicleId: Int, passengerIds: IntArray?): ClientboundSetPassengersPacket? {
-        if (passengersConstructor == null || vehicleField == null || passengersField == null) return null
-
-        return runCatching {
-            passengersConstructor!!.newInstance().apply {
-                vehicleField!!.set(this, vehicleId)
-                passengersField!!.set(this, passengerIds)
-            }
-        }.getOrNull()
+        return constructor.newInstance(byteBuf)
     }
 }
