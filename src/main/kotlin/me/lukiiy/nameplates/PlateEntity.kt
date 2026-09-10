@@ -1,6 +1,7 @@
 package me.lukiiy.nameplates
 
 import com.google.gson.JsonParser
+import com.mojang.math.Transformation
 import com.mojang.serialization.JsonOps
 import me.lukiiy.nameplates.Utils.asNMS
 import net.kyori.adventure.text.Component as AdventureComponent
@@ -11,22 +12,22 @@ import net.minecraft.network.protocol.game.ClientboundAddEntityPacket
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket
 import net.minecraft.world.entity.Display
-import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.EntityTypes
 import org.bukkit.entity.Player
-import java.lang.reflect.Method
+import org.joml.Quaternionf
+import org.joml.Vector3f
 
 class PlateEntity(owner: Player) {
-    private val handle: Display.TextDisplay = Display.TextDisplay(EntityType.TEXT_DISPLAY, owner.asNMS().level())
+    private val handle: Display.TextDisplay = Display.TextDisplay(EntityTypes.TEXT_DISPLAY, owner.asNMS().level())
 
     init {
         handle.apply {
+            setPos(owner.x, owner.y, owner.z)
+
             billboardConstraints = Display.BillboardConstraints.CENTER
             shadowStrength = 0f
             viewRange = 1f
             transformationInterpolationDuration = 0
-
-            lineWidthSetter?.invoke(this, 256)
-            backgroundColorSetter?.invoke(this, 0)
         }
     }
 
@@ -39,19 +40,13 @@ class PlateEntity(owner: Player) {
         handle.text = ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow { IllegalStateException(it) }
     }
 
+    fun setOffset(y: Float) = handle.setTransformation(Transformation(Vector3f(0f, y, 0f), Quaternionf(), Vector3f(1f, 1f, 1f), Quaternionf()))
+
+    fun setSneak(sneaking: Boolean) {
+        handle.textOpacity = if (sneaking) 0x59 else -1 // seems accurate
+    }
+
     fun spawnPacket(): Packet<*> = ClientboundAddEntityPacket(handle, 0, handle.blockPosition())
-    fun mountPacket(owner: Player): Packet<*>? = PassengerPacketAccessor.build(owner.asNMS().id, intArrayOf(handle.id))
     fun metadataPacket(): Packet<*> = ClientboundSetEntityDataPacket(handle.id, handle.entityData.packDirty() ?: handle.entityData.packAll())
     fun removePacket(): Packet<*> = ClientboundRemoveEntitiesPacket(handle.id)
-
-    private companion object {
-        val lineWidthSetter: Method? = findInt2Set("setLineWidth")
-        val backgroundColorSetter: Method? = findInt2Set("setBackgroundColor")
-
-        private fun findInt2Set(name: String): Method? = try { // reflectionsss oh boy
-            Display.TextDisplay::class.java.getDeclaredMethod(name, Int::class.javaPrimitiveType).apply { isAccessible = true }
-        } catch (_: NoSuchMethodException) {
-            null
-        }
-    }
 }
