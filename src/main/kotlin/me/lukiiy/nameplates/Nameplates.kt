@@ -9,6 +9,7 @@ class Nameplates : JavaPlugin() {
     var viewDist: Int = 0
     var updateTicks: Long = 20
     var verticalOffset: Double = 0.0
+    var lineGap: Double = .7
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -38,5 +39,6 @@ class Nameplates : JavaPlugin() {
         viewDist = config.getInt("viewDist", 32)
         updateTicks = config.getLong("updateTicks", 20)
         verticalOffset = config.getDouble("verticalOffset", .35)
+        lineGap = config.getDouble( "lineGap", .7 )
     }
 }
