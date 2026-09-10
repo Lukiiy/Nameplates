@@ -2,7 +2,6 @@ package me.lukiiy.nameplates
 
 import me.lukiiy.nameplates.Utils.asNMS
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.JoinConfiguration
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.minecraft.network.protocol.Packet
 import org.bukkit.entity.Player
@@ -12,26 +11,35 @@ import java.util.concurrent.CopyOnWriteArraySet
 class NametagManager {
     private val mini: MiniMessage = MiniMessage.miniMessage()
 
-    private val entities: MutableMap<Player, PlateEntity> = ConcurrentHashMap()
+    private val entities: MutableMap<Player, MutableList<PlateEntity>> = ConcurrentHashMap()
     private val tracking: MutableMap<Player, MutableSet<Player>> = ConcurrentHashMap()
-    private val lines: MutableMap<Player, MutableList<Component>> = ConcurrentHashMap()
+
+    private val lines: MutableMap<Player, List<Component>> = ConcurrentHashMap()
     private val hidden: MutableSet<Player> = CopyOnWriteArraySet()
 
     fun register(player: Player) {
-        entities.computeIfAbsent(player) { PlateEntity(it) }
+        entities.computeIfAbsent(player) { mutableListOf() }
         tracking.putIfAbsent(player, ConcurrentHashMap.newKeySet())
 
-        refresh(player)
+        player.scheduler.runAtFixedRate(Nameplates.instance, { _ -> refresh(player) }, null, 1, Nameplates.instance.updateTicks)
     }
 
     fun unregister(player: Player?) {
-        val entity: PlateEntity? = entities.remove(player!!)
-        val viewers = tracking.remove(player)
+        val p = player ?: return
 
-        if (entity != null && viewers != null) for (viewer in viewers) send(viewer, entity.removePacket())
+        val group = entities.remove(p)
+        val viewers = tracking.remove(p)
 
-        overrides.remove(player)
-        hidden.remove(player)
+        if (group != null && viewers != null) for (viewer in viewers) group.forEach { send(viewer, it.removePacket()) }
+
+        lines.remove(p)
+        hidden.remove(p)
+    }
+
+    fun setLines(player: Player, ordered: List<Component>?) {
+        if (ordered.isNullOrEmpty()) lines.remove(player) else lines[player] = ordered
+
+        refresh(player)
     }
 
     fun setHidden(player: Player, isHidden: Boolean) {
@@ -58,13 +66,31 @@ class NametagManager {
     }
 
     fun refresh(player: Player) {
-        val entity = entities[player] ?: return
-        entity.setText(build(player))
-
+        val group = entities.getOrPut(player) { mutableListOf() }
         val viewers = tracking.computeIfAbsent(player) { ConcurrentHashMap.newKeySet() }
+        val parts = build(player)
+
+        while (group.size < parts.size) {
+            val plate = PlateEntity(player)
+
+            group.add(plate)
+            viewers.forEach { send(it, plate.spawnPacket()); send(it, plate.metadataPacket()) }
+        }
+
+        while (group.size > parts.size) {
+            val plate = group.removeAt(group.size - 1)
+
+            viewers.forEach { send(it, plate.removePacket()) }
+        }
+
+        val lastIdx = group.size - 1
+        for (i in group.indices) {
+            group[i].setText(parts[i])
+            group[i].setOffset(offsetFor(i, lastIdx))
+        }
 
         if (isHidden(player)) {
-            viewers.forEach { send(it, entity.removePacket()) }
+            viewers.forEach { v -> group.forEach { send(v, it.removePacket()) } }
             viewers.clear()
 
             return
@@ -74,24 +100,28 @@ class NametagManager {
         val viewDistSq = Nameplates.instance.viewDist.toDouble().let { it * it } // is this like, faster?
         val playerLoc = player.location
 
-
         for (target in player.world.players) {
             if (target == player || target.location.distanceSquared(playerLoc) > viewDistSq) continue
 
             shouldSee.add(target)
         }
 
-        shouldSee.forEach {
-            if (viewers.add(it)) {
-                send(it, entity.spawnPacket())
-                send(it, entity.metadataPacket())
-                send(it, entity.mountPacket(player))
-            } else send(it, entity.metadataPacket())
+        val allIds = group.map { it.id }.toIntArray()
+        val ownerId = player.asNMS().id
+
+        shouldSee.forEach { viewer ->
+            if (viewers.add(viewer)) {
+                group.forEach { send(viewer, it.spawnPacket()); send(viewer, it.metadataPacket()) }
+            } else {
+                group.forEach { send(viewer, it.metadataPacket()) }
+            }
+
+            send(viewer, PassengerPacketAccessor.build(ownerId, allIds))
         }
 
-        viewers.removeAll {
-            if (it !in shouldSee) {
-                send(it, entity.removePacket())
+        viewers.removeAll { v ->
+            if (v !in shouldSee) {
+                group.forEach { send(v, it.removePacket()) }
 
                 true // this means removed, btw
             } else {
@@ -100,18 +130,9 @@ class NametagManager {
         }
     }
 
-    private fun build(player: Player): Component {
-        val override = overrides[player]
-        if (override != null) return mini.deserialize(override)
+    private fun offsetFor(index: Int, lastIndex: Int): Float = (Nameplates.instance.verticalOffset + (lastIndex - index) * Nameplates.instance.lineGap).toFloat()
 
-        val playerLines: MutableList<Component>? = lines[player]
-        if (playerLines.isNullOrEmpty()) return player.displayName()
-
-        val components: MutableList<Component?> = ArrayList()
-        for (line in playerLines) components.add(line)
-
-        return Component.join(JoinConfiguration.newlines(), components)
-    }
+    private fun build(player: Player): List<Component> = lines[player] ?: listOf(player.displayName())
 
     private fun send(viewer: Player, packet: Packet<*>?) {
         if (packet == null) return
