@@ -1,5 +1,6 @@
 package me.lukiiy.nameplates
 
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import org.bukkit.plugin.java.JavaPlugin
 
 class Nameplates : JavaPlugin() {
