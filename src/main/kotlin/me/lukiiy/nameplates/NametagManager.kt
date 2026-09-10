@@ -42,6 +42,17 @@ class NametagManager {
 
     fun isHidden(player: Player?): Boolean = hidden.contains(player)
 
+    fun updateSneak(player: Player, sneaking: Boolean) {
+        val group = entities[player] ?: return
+        group.forEach { it.setSneak(sneaking) }
+
+        val viewers = tracking[player] ?: return
+
+        group.forEach { plate ->
+            viewers.forEach { send(it, plate.metadataPacket()) }
+        }
+    }
+
     fun refreshAll() {
         for (player in entities.keys) refresh(player)
     }
