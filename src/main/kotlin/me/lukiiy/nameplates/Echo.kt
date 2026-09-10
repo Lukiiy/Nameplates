@@ -29,4 +29,9 @@ class Echo : Listener {
     fun worldChange(e: PlayerChangedWorldEvent) {
         plugin.manager.refresh(e.getPlayer())
     }
+
+    @EventHandler
+    fun sneak(e: PlayerToggleSneakEvent) {
+        e.player.scheduler.run(plugin, { _ -> plugin.manager.updateSneak(e.player, e.isSneaking) }, null)
+    }
 }
