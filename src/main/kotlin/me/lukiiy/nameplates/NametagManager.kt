@@ -72,23 +72,21 @@ class NametagManager {
         val viewers = tracking.computeIfAbsent(player) { ConcurrentHashMap.newKeySet() }
         val parts = build(player)
 
-        while (group.size < parts.size) {
-            val plate = PlateEntity(player)
+        val totalLines = parts.size
 
-            group.add(plate)
-            viewers.forEach { send(it, plate.spawnPacket()); send(it, plate.metadataPacket()) }
-        }
+        if (group.size != totalLines) {
+            viewers.forEach { v -> group.forEach { send(v, it.removePacket()) } }
+            group.clear()
 
-        while (group.size > parts.size) {
-            val plate = group.removeAt(group.size - 1)
-
-            viewers.forEach { send(it, plate.removePacket()) }
+            for (i in parts.indices) {
+                group.add(PlateEntity(player, i, totalLines))
+            }
         }
 
         val lastIdx = group.size - 1
         for (i in group.indices) {
             group[i].setText(parts[i])
-            group[i].setOffset(offsetFor(i, lastIdx))
+            group[i].sneak(player.isSneaking)
         }
 
         if (isHidden(player)) {
@@ -112,11 +110,9 @@ class NametagManager {
         val ownerId = player.asNMS().id
 
         shouldSee.forEach { viewer ->
-            if (viewers.add(viewer)) {
-                group.forEach { send(viewer, it.spawnPacket()); send(viewer, it.metadataPacket()) }
-            } else {
-                group.forEach { send(viewer, it.metadataPacket()) }
-            }
+            if (viewers.add(viewer)) { group.forEach { send(viewer, it.spawnPacket()) } }
+
+            group.forEach { send(viewer, it.metadataPacket()) }
 
             send(viewer, PassengerPacketAccessor.build(ownerId, allIds))
         }
