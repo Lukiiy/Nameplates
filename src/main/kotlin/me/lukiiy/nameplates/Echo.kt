@@ -32,6 +32,6 @@ class Echo : Listener {
 
     @EventHandler
     fun sneak(e: PlayerToggleSneakEvent) {
-        e.player.scheduler.run(plugin, { _ -> plugin.manager.updateSneak(e.player, e.isSneaking) }, null)
+        e.player.scheduler.runDelayed(plugin, { _ -> plugin.manager.updateSneak(e.player, e.isSneaking) }, null, 2L) // todo tweak
     }
 }
