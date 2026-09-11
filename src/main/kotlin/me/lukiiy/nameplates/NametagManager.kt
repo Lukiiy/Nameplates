@@ -52,12 +52,14 @@ class NametagManager {
 
     fun updateSneak(player: Player, sneaking: Boolean) {
         val group = entities[player] ?: return
-        group.forEach { it.setSneak(sneaking) }
-
         val viewers = tracking[player] ?: return
 
-        group.forEach { plate ->
-            viewers.forEach { send(it, plate.metadataPacket()) }
+        group.forEach {
+            it.sneak(sneaking)
+
+            val packet = it.metadataPacket()
+
+            viewers.forEach { viewer -> send(viewer, packet) }
         }
     }
 
