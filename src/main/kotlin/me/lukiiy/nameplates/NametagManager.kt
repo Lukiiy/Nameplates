@@ -129,8 +129,6 @@ class NametagManager {
         }
     }
 
-    private fun offsetFor(index: Int, lastIndex: Int): Float = (Nameplates.instance.verticalOffset + (lastIndex - index) * Nameplates.instance.lineGap).toFloat()
-
     private fun build(player: Player): List<Component> = lines[player] ?: listOf(player.displayName())
 
     private fun send(viewer: Player, packet: Packet<*>?) {
