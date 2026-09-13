@@ -18,6 +18,7 @@ class NametagManager {
 
     private val lines: MutableMap<Player, List<Component>> = ConcurrentHashMap()
     private val hidden: MutableSet<Player> = CopyOnWriteArraySet()
+    private val self: MutableSet<Player> = ConcurrentHashMap.newKeySet()
 
     fun register(player: Player) {
         entities.computeIfAbsent(player) { mutableListOf() }
@@ -36,6 +37,7 @@ class NametagManager {
 
         lines.remove(p)
         hidden.remove(p)
+        self.remove(p)
     }
 
     fun setLines(player: Player, ordered: List<Component>?) {
@@ -102,7 +104,7 @@ class NametagManager {
         val playerLoc = player.location
 
         for (target in player.world.players) {
-            if (target == player || target.location.distanceSquared(playerLoc) > viewDistSq) continue
+            if (target.location.distanceSquared(playerLoc) > viewDistSq || target == player && !isSelf(player)) continue
 
             shouldSee.add(target)
         }
@@ -129,7 +131,15 @@ class NametagManager {
         }
     }
 
-    private fun build(player: Player): List<Component> = lines[player] ?: listOf(player.displayName())
+    fun setSelf(player: Player, enabled: Boolean) {
+        if (enabled) self.add(player) else self.remove(player)
+
+        refresh(player)
+    }
+
+    fun isSelf(player: Player?): Boolean = self.contains(player)
+
+    private fun build(player: Player): List<Component> = lines[player] ?: listOf(Component.text("AaAAAA"), Component.text("Dev").color(NamedTextColor.GOLD).decorate(TextDecoration.BOLD), player.displayName(), Component.text("<3"))
 
     private fun send(viewer: Player, packet: Packet<*>?) {
         if (packet == null) return
