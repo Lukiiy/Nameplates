@@ -16,6 +16,7 @@ class NametagManager {
 
     private val lines: MutableMap<Player, List<Component>> = ConcurrentHashMap()
     private val hidden: MutableSet<Player> = CopyOnWriteArraySet()
+    private val self: MutableSet<Player> = ConcurrentHashMap.newKeySet()
 
     fun register(player: Player) {
         entities.computeIfAbsent(player) { mutableListOf() }
@@ -34,6 +35,7 @@ class NametagManager {
 
         lines.remove(p)
         hidden.remove(p)
+        self.remove(p)
     }
 
     fun setLines(player: Player, ordered: List<Component>?) {
@@ -101,7 +103,7 @@ class NametagManager {
         val playerLoc = player.location
 
         for (target in player.world.players) {
-            if (target == player || target.location.distanceSquared(playerLoc) > viewDistSq) continue
+            if (target.location.distanceSquared(playerLoc) > viewDistSq || target == player && !isSelf(player)) continue
 
             shouldSee.add(target)
         }
@@ -129,6 +131,14 @@ class NametagManager {
             }
         }
     }
+
+    fun setSelf(player: Player, enabled: Boolean) {
+        if (enabled) self.add(player) else self.remove(player)
+
+        refresh(player)
+    }
+
+    fun isSelf(player: Player?): Boolean = self.contains(player)
 
     private fun offsetFor(index: Int, lastIndex: Int): Float = (Nameplates.instance.verticalOffset + (lastIndex - index) * Nameplates.instance.lineGap).toFloat()
 
