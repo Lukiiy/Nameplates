@@ -34,7 +34,15 @@ object Cmd {
         Command.SINGLE_SUCCESS
     })
 
-    // self
+    private val self = Commands.literal("self").executes {
+        val player = it.source.sender as? Player ?: return@executes Command.SINGLE_SUCCESS
+        val state = !Nameplates.instance.manager.isSelf(player)
 
-    fun register(): LiteralCommandNode<CommandSourceStack> = main.then(reload).then(toggle).build()
+        Nameplates.instance.manager.setSelf(player, state)
+        player.sendMessage(Component.text("Toggled ").append(Component.text(if (state) "on" else "off")).append(Component.text(" your own nametag!")))
+
+        Command.SINGLE_SUCCESS
+    }
+
+    fun register(): LiteralCommandNode<CommandSourceStack> = main.then(reload).then(toggle).then(self).build()
 }
